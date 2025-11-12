@@ -1,0 +1,42 @@
+{
+    "sensors": {
+      "motion_living_room":      { "class": "motion",  "location": "living_room" },
+      "motion_hvac_area":        { "class": "motion",  "location": "hvac_ceiling" },
+      "motion_kitchen":          { "class": "motion",  "location": "kitchen" },
+      "motion_dining_room":      { "class": "motion",  "location": "dining_room" },
+      "motion_bedroom":          { "class": "motion",  "location": "bedroom" },
+      "motion_closet":           { "class": "motion",  "location": "closet" },
+      "motion_bathroom":         { "class": "motion",  "location": "bathroom" },
+      "motion_hallway_entry":    { "class": "motion",  "location": "hallway_entry" },
+  
+      "contact_kitchen_upper_1": { "class": "contact", "location": "kitchen_upper_cabinet_1" },
+      "contact_kitchen_upper_2": { "class": "contact", "location": "kitchen_upper_cabinet_2" },
+      "contact_kitchen_pantry":  { "class": "contact", "location": "kitchen_pantry" },
+      "contact_kitchen_lower":   { "class": "contact", "location": "kitchen_lower_cabinet" },
+      "contact_kitchen_sink":    { "class": "contact", "location": "kitchen_sink_cabinet" },
+  
+      "contact_kitchen_fridge":  { "class": "contact", "location": "kitchen_fridge_door" },
+      "contact_kitchen_freezer": { "class": "contact", "location": "kitchen_freezer_door" },
+  
+      "contact_kitchen_microwave": {
+        "class":    "contact",
+        "location": "kitchen_microwave_door",
+        "aliases":  [
+          "microwave is done",
+          "microwave finished",
+          "microwave stops",
+          "after microwave beeps"
+        ]
+      },
+  
+      "contact_bathroom_door":    { "class": "contact", "location": "bathroom_door" },
+      "contact_bathroom_cabinet": { "class": "contact", "location": "bathroom_medicine_cabinet" },
+  
+      "contact_front_door":       { "class": "contact", "location": "front_door" },
+  
+      "plug_kitchen_counter_1":  { "class": "power", "location": "kitchen_stove_burner_left" },
+      "plug_kitchen_counter_2":  { "class": "power", "location": "kitchen_stove_burner_right" },
+      "plug_kitchen_microwave":  { "class": "power", "location": "kitchen_microwave_outlet" },
+      "plug_living_room":        { "class": "power", "location": "living_room_lamp_outlet" }
+    }
+  }

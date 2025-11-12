@@ -1,0 +1,24 @@
+{
+    "activities": {
+      "Sleeping":              "bedroom",
+      "Napping":               "bedroom",
+      "Relaxing":              "living_room",
+  
+      "Cooking":               "kitchen",          
+      "Cooking Breakfast":     "kitchen",
+      "Cooking Lunch":         "kitchen",
+      "Cooking Dinner":        "kitchen",
+      "Preparing a Snack":     "kitchen",
+  
+      "Eating Breakfast":      "dining_room",
+      "Eating Lunch":          "dining_room",
+      "Eating Dinner":         "dining_room",
+      "Eating a Snack":        "dining_room",
+  
+      "Bathroom":              "bathroom",
+      "Outside of Home":       "outside",
+      "Other":                 "unknown"
+    }
+  
+}
+  
