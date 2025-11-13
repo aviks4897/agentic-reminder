@@ -1,7 +1,10 @@
-from ast import main
 import os
 import time
 import json
+import weave
+from agents import set_trace_processors
+from weave.integrations.openai_agents.openai_agents import WeaveTracingProcessor
+
 from re import L
 from typing import Any, Optional, List, Dict
 from agents import set_tracing_export_api_key
@@ -22,6 +25,9 @@ from enum import Enum
 from pydantic import BaseModel, Field
 import asyncio
 
+
+weave.init('srinivasan-av-northeastern-university/agent-reminder')
+set_trace_processors([WeaveTracingProcessor()])
 
 
 load_dotenv()
@@ -210,10 +216,10 @@ async def intent_extraction_agent(wrapper: RunContextWrapper[ConversationState],
     
     """
 
-    # t0 = time.perf_counter()
+    t0 = time.perf_counter()
     intent_extraction_agent = Agent[Any](
         name = "intent-extraction-agent",
-        model="gpt-5",
+        model="gpt-5-mini",
         instructions=INTENT_EXTRACTION_AGENT_SYSTEM_PROMPT,
         model_settings=ModelSettings(reasoning_effort="minimal")
     )
@@ -253,7 +259,7 @@ async def intent_extraction_agent(wrapper: RunContextWrapper[ConversationState],
         pass
     
 
-    # print(f"[TIME] intent_extraction_agent total {(time.perf_counter()-t0):.3f}s")
+    print(f"[TIME] intent_extraction_agent total {(time.perf_counter()-t0):.3f}s")
 
     return out
 
@@ -276,7 +282,7 @@ async def feasbility_agent(wrapper: RunContextWrapper[ConversationState]) -> Dic
       - After intent extraction sets state='READY_TO_CHECK'.
     
     """
-
+    t0 = time.perf_counter()
 
     
     with open("/Users/avikapursrinivasan/agent_reminder_system/src/activities.json") as f:
@@ -286,7 +292,7 @@ async def feasbility_agent(wrapper: RunContextWrapper[ConversationState]) -> Dic
 
     agent = Agent[Any](
         name="feasibility-agent",
-        model="gpt-5",
+        model="gpt-5-mini",
         instructions=FEASIBILITY_AGENT_SYSTEM_PROMPT.format(
             activities_json=activities_json,
             sensors_json=sensors_json,
@@ -298,7 +304,7 @@ async def feasbility_agent(wrapper: RunContextWrapper[ConversationState]) -> Dic
     before = wrapper.context.model_dump()
 
     input_payload = json.dumps({
-        "State" : before
+        "state" : before
     })
     print("[DEBUG] JSON INPUT FEASIBILITY: ", input_payload)
     raw = await Runner.run(agent, input=input_payload, context=wrapper.context)
@@ -315,6 +321,8 @@ async def feasbility_agent(wrapper: RunContextWrapper[ConversationState]) -> Dic
     w.context.slots = updated.slots
     w.context.feasibility = updated.feasibility
     w.context.state = updated.state
+
+    print(f"[TIME] feasibility agent total {(time.perf_counter()-t0):.3f}s")
     
     try:
         feas = out.get("feasibility", {})
@@ -325,10 +333,10 @@ async def feasbility_agent(wrapper: RunContextWrapper[ConversationState]) -> Dic
 
 
 
-
+@weave.op
 async def handle_turn(user_text: str, history: str, wrapper: RunContextWrapper[ConversationState]) -> Dict[str, Any]:
     # 1) Run chat agent (it may call tools too, but we still do an explicit extraction pass)
-    # t_0 = time.perf_counter()
+    t_0 = time.perf_counter()
     assistant = Agent[Any](
         name="chat-assistant-agent",
         model="gpt-5",
@@ -348,11 +356,10 @@ async def handle_turn(user_text: str, history: str, wrapper: RunContextWrapper[C
 
     print("UPDATED STATE JSON: ", wrapper.context.model_dump())
 
-    # print(f"[TIME] Response Agent Total: {(time.perf_counter()-t_0):.3f}s")
+    print(f"[TIME] Response Agent Total: {(time.perf_counter()-t_0):.3f}s")
     
     return {
-        "assistant_reply": assistant_reply,
-        "state": wrapper.context,
+        "assistant_reply": assistant_reply.final_output
     }
 
 
@@ -399,6 +406,7 @@ async def run_chat():
             result = await handle_turn(user_text, conversation_str, wrapper)
             assistant_reply = result.get("assistant_reply", "")
             print(f"Assistant: {assistant_reply}")
+
 
             # Record assistant reply
             store.append_assistant(assistant_reply)
