@@ -4,6 +4,7 @@ import importlib.util
 import sys
 from typing import Any
 from agents import RunContextWrapper
+from dotenv import load_dotenv
 
 # Load chat-assistant.py (hyphenated filename) as a module named 'chat_assistant'
 _CHAT_ASSISTANT_PATH = "/Users/avikapursrinivasan/agent_reminder_system/src/chat-assistant.py"
@@ -21,9 +22,11 @@ ConversationState = chat_assistant.ConversationState
 ConversationStateEnum = chat_assistant.ConversationStateEnum
 handle_turn = chat_assistant.handle_turn
 
+load_dotenv()
 
 
 async def generate_code(state: dict) -> Any:
+    
     
 
     

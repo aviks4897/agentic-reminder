@@ -29,7 +29,14 @@ import asyncio
 weave.init('srinivasan-av-northeastern-university/agent-reminder')
 set_trace_processors([WeaveTracingProcessor()])
 
-from prompts import RESPONSE_AGENT_SYSTEM_PROMPT, FEASIBILITY_AGENT_SYSTEM_PROMPT, RESPONSE_AGENT_SYSTEM_PROMPT_V2, INTENT_EXTRACTION_AGENT_SYSTEM_PROMPT
+from prompts import (
+    RESPONSE_AGENT_SYSTEM_PROMPT, 
+    FEASIBILITY_AGENT_SYSTEM_PROMPT, 
+    RESPONSE_AGENT_SYSTEM_PROMPT_V2, 
+    INTENT_EXTRACTION_AGENT_SYSTEM_PROMPT, 
+    FEASIBILITY_AGENT_SYSTEM_PROMPT_V2, 
+    INTENT_EXTRACTION_AGENT_SYSTEM_PROMPT_V2
+)
 load_dotenv()
 
 
@@ -97,8 +104,8 @@ async def intent_extraction_agent(wrapper: RunContextWrapper[ConversationState],
     t0 = time.perf_counter()
     intent_extraction_agent = Agent[Any](
         name = "intent-extraction-agent",
-        model="gpt-4.1-mini",
-        instructions=INTENT_EXTRACTION_AGENT_SYSTEM_PROMPT
+        model="gpt-5.1",
+        instructions=INTENT_EXTRACTION_AGENT_SYSTEM_PROMPT_V2
     )
 
     print("Wrapper: ", wrapper.context)
@@ -169,11 +176,11 @@ async def feasbility_agent(wrapper: RunContextWrapper[ConversationState]) -> Dic
 
     agent = Agent[Any](
         name="feasibility-agent",
-        model="gpt-5-mini",
-        instructions=(FEASIBILITY_AGENT_SYSTEM_PROMPT
+        model="gpt-5.1",
+        instructions=(FEASIBILITY_AGENT_SYSTEM_PROMPT_V2
         .replace("{activities_json}", activities_json)
         .replace("{sensors_json}", sensors_json)),
-        model_settings=ModelSettings(reasoning_effort="minimal")
+        model_settings=ModelSettings(reasoning_effort="high")
     )
     print("[TOOL] feasbility_agent: called")
 
@@ -291,6 +298,9 @@ async def run_chat():
 
             # Record assistant reply
             store.append_assistant(assistant_reply)
+            
+            if("[ChatEnded]" in assistant_reply):
+                break
         except (KeyboardInterrupt, EOFError):
             break
 
