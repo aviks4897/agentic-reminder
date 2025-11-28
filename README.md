@@ -25,9 +25,13 @@ Everything is built around a shared, typed state (`ConversationState`) that flow
   - `feasbility_agent`: decides whether a reminder is possible given activities/sensors.
   - `chat-assistant-agent`: orchestrator; talks to the user and decides when to call sub‑agents.
 - **Stateful conversation loop**: In-memory `ConversationStore` maintains the full user/assistant history and passes it as context every turn.
-- **Tracing & timing**:
-  - Weave tracing (`weave.init`, `WeaveTracingProcessor`) for rich traces.
+- **Timing**:
   - Per-call timing logs using `time.perf_counter()` for each agent/tool.
+- **Event hooks**:
+  - Lightweight event bus (`events.py`) emits events for supervisor turns and tool invocations (intent extraction, feasibility).
+  - Streamlit UI subscribes to these events for live visibility.
+- **Streamlit UI**:
+  - `src/streamlit_app.py` provides a chat-style interface backed by the same agents and state.
 
 ---
 
@@ -122,59 +126,47 @@ The `run_chat` loop maintains history via a simple `ConversationStore`, builds a
 
 ## Setup
 
-### Requirements
+- Python 3.9+ (dev uses 3.9.6; previously validated on 3.11+)
+- Dependencies are pinned in `requirements.txt` (frozen from the current environment).
 
-- Python 3.11+ (tested with 3.14 via Conda)
-- Core Python dependencies (approximate):
-  - `agents`
-  - `python-dotenv`
-  - `pydantic`
-  - `weave`
-
-Install (example):
+Create a virtual environment and install dependencies from the project root:
 
 ```bash
-pip install agents python-dotenv pydantic weave
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-### Environment variables
+Environment variables:
 
-- `OPENAI_API_KEY` (required)
+- `OPENAI_API_KEY` (required). Export it or place it in `.env` so `load_dotenv()` can pick it up.
 
-Set via shell:
+## Running
 
-```bash
-export OPENAI_API_KEY="your-key-here"
-```
+- CLI assistant:
+  ```bash
+  python src/chat-assistant.py
+  ```
+  Provides a `> ` prompt, returns the assistant reply each turn, and logs timing/state updates. Use `/quit`, `/q`, or `/exit` to leave.
 
-Or put it in a `.env` file and rely on `load_dotenv()`.
+- Streamlit UI:
+  ```bash
+  streamlit run src/streamlit_app.py
+  ```
+  Sidebar shows the current `ConversationState` and recent events emitted from supervisor/tool calls.
+
+- Gradio UI:
+  ```bash
+  python src/gradio_app.py
+  ```
+  Launches a browser UI that mirrors the same agents, with a live reasoning trail in the accordion panel.
 
 ---
 
-## Running the CLI assistant
+## Observability
 
-From the project root:
-
-```bash
-cd /Users/avikapursrinivasan/agent_reminder_system/src
-python chat-assistant.py
-```
-
-You’ll see:
-
-- A prompt `> ` for user messages.
-- The assistant reply per turn.
-- Logged state updates and timing in the console.
-
-Use `/quit` (or `/q`/`/exit`) to exit.
-
----
-
-## Tracing & observability
-
-- Weave integration:
-  - `weave.init('srinivasan-av-northeastern-university/agent-reminder')`
-  - `set_trace_processors([WeaveTracingProcessor()])`
+- Timing: log timestamps and elapsed durations to the console.
 - Timing:
   - Tools and the main `handle_turn` function log elapsed time to help you profile latency.
 
@@ -197,5 +189,3 @@ Use the Weave UI to inspect agent/tool invocations, inputs, outputs, and duratio
    - Intent extraction sets `what`, `when`, `recurrence`, `state = READY_TO_CHECK`.
    - Feasibility runs again, now sets `is_feasible = True` and `state = READY_TO_SCHEDULE`.
    - Assistant confirms the reminder and can close with a summary + `[ChatEnded]`.
-
-
