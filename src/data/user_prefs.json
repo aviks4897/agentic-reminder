@@ -1,0 +1,28 @@
+{
+    "windows": {
+      "anchors": {
+        "breakfast": ["07:30", "09:00"],
+        "lunch":     ["12:00", "13:30"],
+        "dinner":    ["18:30", "20:00"],
+        "bedtime":   ["22:30", "6:00"]
+      },
+      "dayparts": {
+        "morning":   ["06:00", "11:59"],
+        "afternoon": ["12:00", "16:59"],
+        "evening":   ["17:00", "20:59"],
+        "night":     ["21:00", "23:59"]
+      },
+      "work_hours": {
+        "timezone": "America/New_York",
+        "weekly": {
+          "Monday":    ["09:00", "17:30"],
+          "Tuesday":   ["09:00", "17:30"],
+          "Wednesday": ["09:00", "17:30"],
+          "Thursday":  ["09:00", "17:30"],
+          "Friday":    ["09:00", "17:00"],
+          "Saturday":  null,
+          "Sunday":    null
+        }
+      }
+    }
+  }

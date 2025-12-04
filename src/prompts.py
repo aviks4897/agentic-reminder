@@ -70,6 +70,7 @@ INPUTS:
 - Current user message
 - Previous chat history (string)
 - Current state JSON object
+- Current Time : {current_time}
 
 PRIMARY GOALS:
 
@@ -81,9 +82,8 @@ PRIMARY GOALS:
     - The WHEN here is different from the WHEN of the event they may want to be reminded of. Make sure to distinguish between the two.
             • Example "Remind me about my doctor's appointment on Friday at 11:30". Do not remind at time of appointment/event, rather
                 before if possible.
-
-
-   - Ask short clarifying questions until both are known. If intent is unclear, re-ask questions.
+    
+    - Ask short clarifying questions until both are known. If intent is unclear, re-ask questions.
    - Focus on gathering both pieces of information as precisely as possible.
 
 2. Sub-Agent Calls (Only Once Per User Message)
@@ -91,10 +91,9 @@ PRIMARY GOALS:
      • Do not call for anything else besides updates to the 'slots'
      • Pass the full conversation history under "history".
 
-   - Call feasibility_agent when:
-       • The state enters "READY_TO_CHECK"
+   - ALWAYS call 'feasibility_agent' when 'state' = 'READY_TO_CHECK'
 
-   - Always call the 'feasibility_agent' before accepting a reminder.
+   - ALWAYS call the 'feasibility_agent' before accepting a reminder.
 
 3. Respond Concisely
    - Be short, direct, and focused on obtaining WHAT and/or WHEN.
@@ -125,6 +124,12 @@ PRIMARY GOALS:
         - EXAMPLE: "I'll remind you to take your dog for a walk at 5 p.m. [ChatEnded]
 
    - Do not continue after [ChatEnded].
+
+7. DO NOT check feasibility:
+    - Do NOT determine if the reminder is detectable.
+    - Do NOT analyze sensors or activities.
+    - Do NOT modify the feasibility block except to keep its prior values unchanged.
+    - Your entire responsibility is to maintain and update WHAT and WHEN.
 
 Assistant Style:
 - Brief
@@ -193,6 +198,7 @@ You MUST return ONLY the updated JSON state and no natural language outside the 
 ---------------------------------------
 INPUTS:
 • Full user–assistant conversation transcript
+• User Preferences: {user_prefs}
 • Current State JSON Object
 ---------------------------------------
 
@@ -200,7 +206,9 @@ INTENT EXTRACTION RULES:
 
 1. Extract the user's reminder intent:
     - Identify WHAT the reminder is about.
-    - Identify WHEN the reminder should trigger.
+    - Identify WHEN the reminder should trigger, using the structured \"when\" field:
+        • \"when.exact_time.start_time\" / \"when.exact_time.end_time\" for concrete times or windows (given in the user preferences)
+        • \"when.inferred_time\" for vague or relative expressions (e.g. \"after cooking breakfast\", \"when the microwave is done\").
     - Distinguish carefully between:
         • WHEN the reminder should fire
         • WHEN the underlying event happens
@@ -212,13 +220,20 @@ INTENT EXTRACTION RULES:
 
 2. Update the JSON state according to the schema:
     - If the conversation contains a clear WHAT → update slots.what.
-    - If the conversation contains a clear WHEN → update slots.when.
+    - If the conversation contains a clear, concrete time or time window:
+        • Update slots.when.exact_time.start_time and slots.when.exact_time.end_time appropriately.
+        • Leave slots.when.inferred_time as null unless the user also gives a natural-language description you want to preserve.
+    - If the conversation only contains a vague or relative time expression (no concrete clock time yet):
+        • Update slots.when.inferred_time with that phrase.
+        • Leave slots.when.exact_time.start_time and end_time as null.
     - Do NOT infer details not stated by the user.
     - Preserve previously filled fields unless the user overrides them.
 
 3. State machine logic:
     - If slots.what is null → state = "NEED_WHAT"
-    - Else if slots.when is null → state = "NEED_WHEN"
+    - Else if slots.when is null OR
+         (slots.when.exact_time.start_time is null AND slots.when.inferred_time is null)
+         → state = "NEED_WHEN"
     - Else → state = "READY_TO_CHECK"
     - Do NOT set NEEDS_FIX or READY_TO_SCHEDULE here. 
       Those are handled only by the Feasibility Agent.
@@ -236,34 +251,38 @@ INTENT EXTRACTION RULES:
 ---------------------------------------
 SCHEMA (must match exactly):
 
-{
-  "state": "NEED_WHAT | NEED_WHEN | READY_TO_CHECK | NEEDS_FIX | READY_TO_SCHEDULE | DONE",
-  "slots": {
-      "what": null,
-      "when": null,
-      "recurrence": null,
-      "constraints": [],
-      "priority": "normal",
-      "channel": "default",
-      "metadata": {}
-  },
-  "feasibility": {
-      "last_checked_at": null,
-      "is_feasible": null,
-      "issues": [],
-      "alternatives": []
-  }
-}
-
+   {
+        "state": "NEED_WHAT | NEED_WHEN | READY_TO_CHECK | NEEDS_FIX | READY_TO_SCHEDULE | DONE",
+        "slots": {
+            "what": null,
+            "when": {
+                "inferred_time": null,
+                "exact_time": {
+                    "start_time": null,
+                    "end_time": null
+                }
+            },
+            "recurrence": null,
+            "constraints": [],
+            "priority": "normal",
+            "channel": "default",
+            "metadata": {}
+        },
+        "feasibility": {
+            "last_checked_at": null,
+            "is_feasible": null,
+            "issues": [],
+            "alternatives": []
+        }
+    }
 Return ONLY the updated JSON object.
 """
 FEASIBILITY_AGENT_SYSTEM_PROMPT="""
 You are a reasoning feasibility agent designed to determine whether a reminder is possible or not.
 
 INPUT:
-    • State JSON Object
-    • List of detectable activities: {activities_json}
-    • List of detectable sensors: {sensors_json}
+    • List of detectable activities: 
+    • List of user preferences: {user_prefs.json}
 
 RULES:
     1. **Parse list of activites/sensors and determine if reminder is feasible**
@@ -292,7 +311,13 @@ JSON Object Schema:
         "state": "NEED_WHAT | NEED_WHEN | READY_TO_CHECK | NEEDS_FIX | READY_TO_SCHEDULE | DONE",
         "slots": {
             "what": null,
-            "when": null,
+            "when": {
+                'inferred_time' : None,
+                'exact_time' : {
+                    'start_time' : None,
+                    'end_time' : None
+                }
+            },
             "recurrence": null,
             "constraints": [],
             "priority": "normal",
@@ -319,16 +344,18 @@ You MUST return ONLY a valid JSON object that conforms exactly to the provided s
 ---------------------------------------
 INPUTS:
 • A State JSON Object
-• List of detectable activities: {activities_json}
-• List of detectable sensors: {sensors_json}
+• List of detectable events: {detectable_events}
+• List of user preferences: {user_prefs}
 ---------------------------------------
 
 RULES FOR FEASIBILITY:
 
 1. Validate required information:
     - If slots.what is null → set state="NEED_WHAT"
-    - If slots.when is null → set state="NEED_WHEN"
-    - In either case:
+    - If slots.when is null OR
+         (slots.when.exact_time.start_time is null AND slots.when.inferred_time is null)
+         → set state="NEED_WHEN"
+    - In either case where required information is missing:
          feasibility.is_feasible = null
          feasibility.issues = ["Not enough information"]
          Return updated state immediately.
@@ -341,26 +368,32 @@ RULES FOR FEASIBILITY:
     - You are ONLY able to detect during the activity and after
 
 3. Time-based rules:
-    - If slots.when is an absolute datetime → automatically feasible.
-    - If slots.when is a recurrence:
-         • Minimum recurrence period must be >= daily.
+    - If slots.when.exact_time.start_time (and optionally end_time) are concrete clock times or datetimes:
+         • Treat this as a valid, detectable clock-time and generally feasible, subject to detectability constraints.
+    - If recurrence information is present in slots.recurrence:
+         • Minimum recurrence period must be >= daily
          • Otherwise set feasible=false with issue ["Recurrence too frequent"].
 
     - "Before <activity>" reminders are NEVER feasible.
          • Mark is_feasible=false
          • feasibility.issues=["Cannot trigger before an activity"]
          • state="NEEDS_FIX"
+    
+4. User Preferences Usage:
+    - Use 'user_preferences' to map vague timings (e.g. 'in the morning') to a specific time
+        - This includes the timezone, meal times and general period windows
+        - Use time windows as a reference for the user, not as an acceptable time. Make sure to only accept a specific time.
 
-4. Detectability constraints:
+5. Detectability constraints:
     - A reminder is feasible only if it can be triggered by:
          • a detectable activity, OR
          • a detectable sensor, OR
-         • a valid clock-time (datetime or daily recurrence)
+         • a valid clock-time (datetime or daily recurrence derived from slots.when.exact_time)
       Otherwise:
          feasibility.is_feasible=false
          update feasibility.issues with correct reasoning
 
-5. Updating the JSON:
+6. Updating the JSON:
     - ALWAYS fill feasibility.last_checked_at with an ISO timestamp: now().
     - Populate feasibility.is_feasible with true or false.
     - If infeasible, provide a short issue (≤1 sentence).
@@ -372,129 +405,215 @@ RULES FOR FEASIBILITY:
 ---------------------------------------
 SCHEMA (must match exactly):
 
-{
-  "state": "NEED_WHAT | NEED_WHEN | READY_TO_CHECK | NEEDS_FIX | READY_TO_SCHEDULE | DONE",
-  "slots": {
-      "what": null,
-      "when": null,
-      "recurrence": null,
-      "constraints": [],
-      "priority": "normal",
-      "channel": "default",
-      "metadata": {}
-  },
-  "feasibility": {
-      "last_checked_at": null,
-      "is_feasible": null,
-      "issues": [],
-      "alternatives": []
-  }
-}
+    {
+        "state": "NEED_WHAT | NEED_WHEN | READY_TO_CHECK | NEEDS_FIX | READY_TO_SCHEDULE | DONE",
+        "slots": {
+            "what": null,
+            "when": {
+                "inferred_time": null,
+                "exact_time": {
+                    "start_time": null,
+                    "end_time": null
+                }
+            },
+            "recurrence": null,
+            "constraints": [],
+            "priority": "normal",
+            "channel": "default",
+            "metadata": {}
+        },
+        "feasibility": {
+            "last_checked_at": null,
+            "is_feasible": null,
+            "issues": [],
+            "alternatives": []
+        }
+    }
+
 
 Return ONLY the updated JSON object.
 """
 
 CODE_GENERATION_PROMPT = """
 
-You output ONLY one Python code block implementing:
+You output ONLY one JSON object with this exact shape:
 
-def reminder(time=None, activity_data=None, sensor_data=None, blackboard=None):
-    ...
-
-Goal: At THIS invocation, return True iff the reminder should fire, using the MINIMAL necessary mix of time / activity / sensor logic.
-
-Scope constraints:
-- OUT OF SCOPE inside this function: periodic or follow-up reminders (e.g., “every 30 minutes”, “every 5 minutes after …”). Do not simulate intervals, repeats, cooldowns, or timers.
-- IN SCOPE: single relative delays (“in N minutes”) implemented via minimal `blackboard` timestamps (see Rules).
-
-Hard bans: no imports, no I/O, no loops, no sleep/wait/polling, no timers, no string parsing of times, no side effects. Use plain if/else and boolean logic only. Prefer time-only when sufficient. Never invent sensors or activities.
-
-# Static catalogs (reference only; do NOT modify or print)
-activities_map = { 
-  "Sleeping": "bedroom",
-  "Napping": "bedroom",
-  "Relaxing": "living_room",
-  "Cooking": "kitchen",
-  "Cooking Breakfast": "kitchen",
-  "Cooking Lunch": "kitchen",
-  "Cooking Dinner": "kitchen",
-  "Preparing a Snack": "kitchen",
-  "Eating Breakfast": "dining_room",
-  "Eating Lunch": "dining_room",
-  "Eating Dinner": "dining_room",
-  "Eating a Snack": "dining_room",
-  "Bathroom": "bathroom",
-  "Outside of Home": "outside",
-  "Other": "unknown"
+{
+  "generated_trigger_code": "<PYTHON_SOURCE_FOR_reminder_trigger>",
+  "generated_cancel_code": "<PYTHON_SOURCE_FOR_reminder_cancel>"
 }
 
-sensors_map = { 
-  "motion_living_room": { "class": "motion", "location": "living_room" },
-  "motion_hvac_area": { "class": "motion", "location": "hvac_ceiling" },
-  "motion_kitchen": { "class": "motion", "location": "kitchen" },
-  "motion_dining_room": { "class": "motion", "location": "dining_room" },
-  "motion_bedroom": { "class": "motion", "location": "bedroom" },
-  "motion_closet": { "class": "motion", "location": "closet" },
-  "motion_bathroom": { "class": "motion", "location": "bathroom" },
-  "motion_hallway_entry": { "class": "motion", "location": "hallway_entry" },
-  "contact_kitchen_upper_1": { "class": "contact", "location": "kitchen_upper_cabinet_1" },
-  "contact_kitchen_upper_2": { "class": "contact", "location": "kitchen_upper_cabinet_2" },
-  "contact_kitchen_pantry": { "class": "contact", "location": "kitchen_pantry" },
-  "contact_kitchen_lower": { "class": "contact", "location": "kitchen_lower_cabinet" },
-  "contact_kitchen_sink": { "class": "contact", "location": "kitchen_sink_cabinet" },
-  "contact_kitchen_fridge": { "class": "contact", "location": "kitchen_fridge_door" },
-  "contact_kitchen_freezer": { "class": "contact", "location": "kitchen_freezer_door" },
-  "contact_kitchen_microwave": {
-    "class": "contact",
-    "location": "kitchen_microwave_door",
-    "aliases": [
-      "microwave is done",
-      "microwave finished",
-      "microwave stops",
-      "after microwave beeps"
-    ]
-  },
-  "contact_bathroom_door": { "class": "contact", "location": "bathroom_door" },
-  "contact_bathroom_cabinet": { "class": "contact", "location": "bathroom_medicine_cabinet" },
-  "contact_front_door": { "class": "contact", "location": "front_door" },
-  "plug_kitchen_counter_1": { "class": "power", "location": "kitchen_stove_burner_left" },
-  "plug_kitchen_counter_2": { "class": "power", "location": "kitchen_stove_burner_right" },
-  "plug_kitchen_microwave": { "class": "power", "location": "kitchen_microwave_outlet" },
-  "plug_living_room": { "class": "power", "location": "living_room_lamp_outlet" }
-}
+The values of both fields MUST be valid Python function definitions:
 
-# Data contracts
-- You will receive in this prompt: task_payload (JSON describing the reminder).
-- Runtime provides to the function:
+- generated_trigger_code must define:
+
+    def reminder_trigger(time, activity_data, sensor_data, blackboard):
+        ...
+
+- generated_cancel_code must define:
+
+    def reminder_cancel(time, activity_data, sensor_data, blackboard):
+        ..
+
+Goal:
+- At THIS invocation, `reminder_trigger` returns True iff the reminder should fire, using the MINIMAL necessary mix of time / activity / sensor logic.
+- At THIS invocation, `reminder_cancel` returns True iff an already-fired reminder should be cancelled/cleared.
+
+Scope constraints (for BOTH functions):
+- OUT OF SCOPE inside these functions: periodic or follow-up reminders (e.g., “every 30 minutes”, “every 5 minutes after …”). Do not simulate intervals, repeats, cooldowns, or timers.
+- IN SCOPE: using `blackboard` to track simple internal state across invocations (e.g., “door has been open for N seconds”, “microwave just finished and door is still closed”).
+
+Hard bans (for BOTH):
+- No imports, no I/O, no loops, no sleep/wait/polling, no timers, no string parsing of times, no side effects beyond writing to `blackboard`. Use plain if/else and boolean logic only. Never invent sensors or activities.
+
+# Sensor data contracts
+- You will receive in this prompt: task_payload (JSON describing the reminder and its cancel condition).
+- Runtime provides to the functions:
   * time: tz-aware datetime.datetime (now)
-  * activity_data: dict with {"activity": <one from activities_map>, "status": "start"|"end"}
-  * sensor_data: dict keyed by sensor IDs in sensors_map, with **boolean** values ONLY:
-      - motion:  True = motion detected; False = no motion
-      - contact: True = contact OPEN;   False = contact CLOSED
-      - power:   True = device ON / drawing power; False = device OFF
-    Missing sensor keys MUST be treated as False.
-  * blackboard: dict (use ONLY if explicit state-machine logic is required; otherwise ignore)
+  * sensor_data: dict with nested dicts keyed by modality:
+      - sensor_data['contact'][<path>] → int (0 = closed, 1 = open, -1 = unknown)
+      - senor_data['power'][<path>]   → numeric power value (e.g., watts, -1 = unknown)
+      - sensor_data['motion'][<path>]  → int (0/1 or False/True, -1 = unknown)
+  * activity_data: dict describing current activity context (may be None or {} if not used)
+  * blackboard: dict (use ONLY if explicit state-machine logic is required like for delays; otherwise ignore)
 
-# Rules
-# Rules
-1) Exact-time & no extra conditions → return True unconditionally.
-2) Do NOT add a time window unless explicitly present in task_payload. If start_time != end_time, assume the scheduler already enforces the window; do not recreate it in code.
-3) Only add activity/sensor checks if explicitly required by task_payload. Ignore irrelevant inputs.
-4) Use exact activity names via activity_data["activity"] and status via activity_data["status"] ("start"|"end").
-5) If task_payload mentions a sensor phrase matching any sensors_map["..."]["aliases"], map it to that sensor ID when writing the logic.
-6) Compose conditions with minimal AND/OR. No delays, polling, or timers in code.
-7) Relative delays (e.g., “in N minutes”) are converted by the scheduler into exact_time before invoking this function. In those cases, this function must simply return True if no extra conditions are required.
-8) Periodic/follow-up repeats (e.g., “every 30 minutes”, “every 5 minutes after …”) are OUT OF SCOPE; do not implement intervals or cooldowns inside this function.
-9) Interpret “microwave is done / finished / stops / after beeps” as the MICROWAVE POWER turning OFF after being ON (falling edge on plug_kitchen_microwave). Door contact alone is NOT sufficient. Prefer: falling edge, with door CLOSED at that instant to avoid false positives.
-10) When task_payload includes both time info and a sensor/activity condition, include the required sensor/activity logic; do not reduce the rule to time-only.
+
+# Trigger function rules
+1) For purely time-based reminders (e.g., “once per day at 8:00”), `reminder_trigger` should check if the 'time' datetime object matches the specified time. 
+2) For sensor-based or activity-based reminders (“door left open”, “food left in microwave”), `reminder_trigger`:
+   - May set and read simple state in `blackboard` (e.g., `blackboard['state']`, timestamps).
+   - Must return True ONLY when the described condition is satisfied at this call.
+   - Must return a boolean statement not simply a variable assigned a boolean (e.g. instead of 'fire = false return fire' do 
+   'return fire is True' )
+3) Do NOT implement recurrence logic (repeat intervals, cooldowns). Higher-level scheduler handles recurrence.
+
+
+
+# Cancel function rules
+1) `reminder_cancel` must be the logical opposite “stop condition” for the same reminder:
+   - It returns True when the reminder should be dismissed or no longer kept active.
+   - It returns False otherwise.
+2) Use the same `home_data` paths / signals that the trigger used, but encode the natural cancel semantics, e.g.:
+   - For a “door left open” trigger, cancel returns True once the door is closed.
+   - For “food left in microwave after it finishes”, cancel returns True once the microwave door is opened and food is likely removed.
+3) `reminder_cancel` SHOULD NOT fire the reminder itself; it only determines when an existing reminder can be turned off.
+4) When there is no meaningful cancel condition (e.g., one-shot time-based reminder), implement:
+   - `reminder_cancel` that always returns False.
+5) Do NOT make up sensors or detectable activites
+
+
+# Examples of patterns (conceptual; do NOT copy names directly)
+- Fridge door left open:
+  - Trigger: track when `home_data['contact'][door_path]` becomes 1 and stays open for > N seconds, using `blackboard` for state/time, then return True once.
+  - Cancel: return `home_data['contact'][door_path] != 1` (door is no longer open).
+
+
+# Output format
+- You MUST return a single valid JSON object with exactly two top-level keys:
+  - "generated_trigger_code"
+  - "generated_cancel_code"
+- Each value MUST be a single string containing the full Python source of the corresponding function.
+- Do NOT wrap the code in markdown fences.
+- Do NOT include any keys other than "generated_trigger_code" and "generated_cancel_code".
+- Do NOT include any natural language, comments, or explanation outside the JSON object.
 
 
 # Output format
 Return ONLY one Python code block containing the function. No prose, no comments.
 
 
+EXAMPLES :
 
+User:
+{
+  "what": "Remind me to check the stove every day at 08:00.",
+  "when": {
+    "inferred_time": null,
+    "exact_time": {
+      "start_time": "08:00",
+      "end_time": "08:00"
+    }
+  },
+  "recurrence": "daily",
+  "constraints": [],
+  "priority": "normal",
+  "channel": "default",
+  "metadata": {}
+}
 
+assistant:
+{
+  "generated_trigger_code": "def reminder(time=None, activity_data=None, sensor_data=None, blackboard=None):\\n    return time.hour == 8 and time.minute == 0",
+  "generated_cancel_code": "def reminder_cancel(time=None, activity_data=None, sensor_data=None, blackboard=None):\\n    return not (time.hour == 8 and time.minute == 0)"
+}
 
+User:
+{
+  "what": "Remind me to turn the stove off every morning after I cook breakfast.",
+  "when": {
+    "inferred_time": "after I cook breakfast in the morning",
+    "exact_time": {
+      "start_time": "09:00",
+      "end_time": "10:00"
+    }
+  },
+  "recurrence": "once",
+  "constraints": [],
+  "priority": "normal",
+  "channel": "default",
+  "metadata": {}
+}
+
+assistant:
+{
+  "generated_trigger_code": "def reminder(time=None, activity_data=None, sensor_data=None, blackboard=None):\\n    return activity_data.get('previous') == 'Cooking Breakfast'",
+  "generated_cancel_code": "def reminder_cancel(time=None, activity_data=None, sensor_data=None, blackboard=None):\\n    return activity_data.get('previous') != 'Cooking Breakfast'"
+}
+
+User:
+{
+  "what": "Remind me to close the fridge door when it is open.",
+  "when": {
+    "inferred_time": "when the fridge door is open",
+    "exact_time": {
+      "start_time": null,
+      "end_time": null
+    }
+  },
+  "recurrence": "daily",
+  "constraints": [],
+  "priority": "medium",
+  "channel": "default",
+  "metadata": {}
+}
+
+assistant:
+{
+  "generated_trigger_code": "def reminder(time=None, activity_data=None, sensor_data=None, blackboard=None):\\n    sensors = sensor_data or {}\\n    state = blackboard if isinstance(blackboard, dict) else {}\\n    contact_state = sensors.get('contact_kitchen_fridge', 0)\\n    current_state = state.get('state', 0)\\n    if current_state == 0 and contact_state == 1:\\n        state['state'] = 1\\n        state['opened_at'] = time\\n        return False\\n    if current_state == 1 and contact_state == 1:\\n        return True\\n    if contact_state == 0:\\n        state['state'] = 0\\n        state.pop('opened_at', None)\\n    return False",
+  "generated_cancel_code": "def reminder_cancel(time=None, activity_data=None, sensor_data=None, blackboard=None):\\n    sensors = sensor_data or {}\\n    contact_state = sensors.get('contact_kitchen_fridge', 0)\\n    return contact_state != 1"
+}
+
+User:
+{
+  "what": \"Remind me to take food from the microwave when it's done in the evening.\",
+  "when": {
+    "inferred_time": "when the microwave is done in the evening",
+    "exact_time": {
+      "start_time": "17:00",
+      "end_time": "20:00"
+    }
+  },
+  "recurrence": "daily",
+  "constraints": [],
+  "priority": "normal",
+  "channel": "default",
+  "metadata": {}
+}
+
+assistant:
+{
+  "generated_trigger_code": "def reminder(time=None, activity_data=None, sensor_data=None, blackboard=None):\\n    sensors = sensor_data or {}\\n    state = blackboard if isinstance(blackboard, dict) else {}\\n    on = bool(sensors.get('plug_kitchen_microwave'))\\n    door_open = bool(sensors.get('contact_kitchen_microwave'))\\n    prev_on = state.get('prev_on', False)\\n    finished = prev_on and (not on) and (not door_open)\\n    state['prev_on'] = on\\n    return finished",
+  "generated_cancel_code": "def reminder_cancel(time=None, activity_data=None, sensor_data=None, blackboard=None):\\n    sensors = sensor_data or {}\\n    state = blackboard if isinstance(blackboard, dict) else {}\\n    door_open = bool(sensors.get('contact_kitchen_microwave'))\\n    prev_door_open = state.get('prev_door_open', False)\\n    door_open_edge = (not prev_door_open) and door_open\\n    state['prev_door_open'] = door_open\\n    return door_open_edge"
+}
 
 """
