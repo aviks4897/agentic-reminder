@@ -1,0 +1,12 @@
+agents
+openai
+fastapi
+uvicorn
+gradio
+python-dotenv
+pydantic
+weave
+typing_extensions
+pyyaml
+
+

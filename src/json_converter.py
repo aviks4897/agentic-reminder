@@ -5,6 +5,7 @@ import os
 from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
+from model_def import TriggerMachine
 
 
 JSON_CONVERSION_SYSTEM_PROMPT = """
@@ -19,27 +20,12 @@ You will be provided with sensor code for detecting the reminder and a JSON summ
 
 1. **Insert correct keys in provided schema**
         **Requirements**
-            - Insert generated code into "generated_trigger_code" for sensor readings.
+            - Insert generated trigger code into generated_trigger_code'  for sensor readings and generated cancel code into 'generated_cancel_code'.
             - Insert recurrence information provided from "recurrence" dictionary in reminder, where "repeat" is True when "type" is not "once" and False everywhere else. Fill in the other keys accordingly.
             - Use "task" from reminder summary to name TriggerId. For naming, use the item the task is referring to and end with '(task name)_trigger_id_1'. 
                 - Example: When the freezer door was open, TriggerId : freezer_door_trigger_1
             - TriggerName should follow a similar pattern and describe what generally the reminder is detecting (e.g. "freezer_door not closed").
 
-2. **Create cancel code for reminders**
-    
-    Goal: Write a cancel function that returns True exactly when the reminder/event started by the trigger should be dismissed/considered ended; otherwise return False. 
-    
-    **Code Requirements**
-        - Return type must be a boolean
-            - True = Cancel/dismiss reminder, False = Keep reminder active
-        - Function name should be 'def (reminder_name)_cancel_code'
-        - Function inputs should mimic original trigger code
-    **Design Choices**
-        - Base code off logic from original trigger code provided and follow same pattern for determining if the trigger should be canceled (e.g. door closed after being open, 
-        motion ceased for X seconds, value returned to normal range)
-        - Add any imports you might need inside function
-        - Keep code simple and concise
-        - Delay should be 0 unless specified somewhere else.
 
 3. **Handling actions and reminder message**
 
@@ -114,38 +100,6 @@ Keep close track of the reminder summary and generated code and how it relates t
 """
 
 
-class Recurrence(BaseModel):
-    repeat: bool
-    details: Optional[Any] = None
-    occurrence_frequency: Literal["always", "once", "multiple", "daily", "weekly", "monthly", "yearly"]
-
-
-class TriggerCondition(BaseModel):
-    generated_trigger_code: str
-    recurrence: Recurrence
-
-
-class CancelCondition(BaseModel):
-    delay: int = Field()
-    generated_cancel_code: str = Field(description="The code to determine when the trigger is canceled")
-
-
-class Action(BaseModel):
-    type: Literal["reminder"]
-    title: str
-    content: str
-    priority: int
-    end_signal: Optional[Any] = None
-
-
-class TriggerDefinition(BaseModel):
-    TriggerId: str
-    TriggerName: str
-    trigger_condition: TriggerCondition
-    cancel_condition: CancelCondition
-    construction_info: Optional[Any] = None
-    actions: List[Action]
-
 
 load_dotenv()
 _client = OpenAI()
@@ -177,21 +131,18 @@ def _extract_output_text(resp: Any) -> str:
         return ""
 
 
-def generate_json(reminder: Any, code: str) -> str:
+def generate_json(code: str) -> str:
     """
     Use the OpenAI Responses API (gpt-5.1) to convert a reminder + trigger code
     into a structured TriggerDefinition JSON string.
     """
     logger = logging.getLogger(__name__)
 
-    # Ensure reminder is a JSON string for the prompt
-    reminder_str = reminder if isinstance(reminder, str) else json.dumps(reminder)
-
     # Build a single combined input; system instructions come from JSON_CONVERSION_SYSTEM_PROMPT
-    input_text = f"Code:\n{code}\n\nReminder:\n{reminder_str}"
+    input_text = f"Code:\n{code}"
 
     # Configure response_format using the Pydantic schema
-    schema = TriggerDefinition.model_json_schema()
+    schema = TriggerMachine.model_json_schema()
 
     resp = _client.responses.create(
         model="gpt-5.1",
@@ -212,7 +163,7 @@ def generate_json(reminder: Any, code: str) -> str:
         raise RuntimeError("JSON conversion returned empty output_text")
 
     # Validate against TriggerDefinition for safety
-    parsed = TriggerDefinition.model_validate_json(raw_text)
+    parsed = TriggerMachine.model_validate_json(raw_text)
     json_str = parsed.model_dump_json(indent=2)
 
     logger.info("LLM structured result created")

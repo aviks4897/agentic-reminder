@@ -1,13 +1,15 @@
-import asyncio
 import importlib.util
 import os
 import sys
 from typing import Any, Dict, List, Optional
 
+import yaml
 from fastapi import FastAPI
 from pydantic import BaseModel
 
 from agents import RunContextWrapper
+from code_generation import CodeGeneration
+from json_converter import generate_json
 
 
 _CHAT_ASSISTANT_PATH = os.path.join(os.path.dirname(__file__), "chat-assistant.py")
@@ -46,6 +48,7 @@ class ChatResponse(BaseModel):
     assistant_reply: str
     state: ConversationState
     history: List[HistoryMessage]
+    generated_yaml: Optional[str] = None
 
 
 def _history_to_string(messages: List[HistoryMessage]) -> str:
@@ -77,6 +80,28 @@ async def chat(req: ChatRequest) -> ChatResponse:
         wrapper=wrapper,
     )
     assistant_reply = result.get("assistant_reply", "")
+    trigger_json_str: Optional[str] = None
+
+    # If the conversation has ended, trigger code + JSON → YAML generation once and attach result
+    if "[ChatEnded]" in assistant_reply:
+        try:
+            state_dict = (
+                wrapper.context
+                if isinstance(wrapper.context, dict)
+                else wrapper.context.model_dump()
+            )
+            # 1) Generate trigger/cancel code from the final state
+            code_obj = await CodeGeneration.generate_code(state_dict)
+            combined_code = (
+                (code_obj.get("generated_trigger_code") or "")
+                + "\n\n"
+                + (code_obj.get("generated_cancel_code") or "")
+            )
+
+            # 2) Use json_converter agent to build a TriggerMachine JSON string
+            trigger_json_str = generate_json(combined_code)
+        except Exception as e:
+            trigger_json_str = f"# code_generation_failed: {e}"
 
     # Append assistant reply to history for the caller
     new_history = history + [HistoryMessage(role="assistant", content=assistant_reply)]
@@ -85,6 +110,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
         assistant_reply=assistant_reply,
         state=wrapper.context,
         history=new_history,
+        generated_json=trigger_json_str,
     )
 
 

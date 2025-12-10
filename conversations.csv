@@ -1,0 +1,151 @@
+id,ended_at,conversation_str
+b7b0c5fc-f5d3-4157-b1d6-9f574433ef1d,2025-11-20T21:14:21.977538Z,"user: hello
+assistant: Hello! What would you like me to remind you about?
+user: remind me to take out the trash tommorow at 6 pm
+assistant: I’ll remind you to take out the trash tomorrow at 6 p.m. [ChatEnded]"
+abb33805-7ac4-4db7-bc7c-05570576c526,2025-11-24T04:13:40.116457Z,"user: hello
+assistant: Hello! What would you like me to remind you about?
+user: I need a reminder to start thawing out dinner today at 5 pm
+assistant: I’ll remind you to start thawing out dinner today at 5 p.m. [ChatEnded]"
+e97eeaa4-e5b4-47cf-bd95-3d402f21299a,2025-11-24T04:15:40.348216Z,"user: please set a reminder to wash my hands after work, I get off around 7 pm
+assistant: I can’t reliably detect “after work,” so this reminder isn’t set up yet.
+
+Would you like me to make it a daily reminder at exactly 7:00 p.m.?
+user: yes at 7 pm
+assistant: I’ll remind you daily at 7:00 p.m. to wash your hands. [ChatEnded]"
+40cdccc9-eda8-43bd-a11f-482e4b6a4d5e,2025-11-24T17:45:46.512568Z,"user: remind me to turn the stove off
+assistant: When should I remind you to turn the stove off?
+user: when it is on
+assistant: Should I remind you every time the stove turns on, or only at a specific time (like “10 minutes after it turns on” or “at 7 p.m.”)?
+user: no just when it is on
+assistant: Got it—you want a reminder any time the stove is on.
+
+To set this up as a reminder, do you want it:
+- every time the stove turns on, or  
+- just the first time it turns on each day?
+user: every time
+assistant: You’ll get a reminder to turn the stove off every time it is on. [ChatEnded]"
+e299a729-f332-4370-a051-19c972d90a83,2025-11-24T18:23:51.447208Z,"user: please remind me to take my medication everyday at 7 pm
+assistant: I’ll remind you to take your medication every day at 7 p.m. [ChatEnded]"
+9169b3b5-f46b-4555-abec-2151d9500bc9,2025-11-24T18:25:33.873226Z,"user: send a daily message to my mom to eat breakfast and call me at 9:40 am
+assistant: I’ll remind you every day at 9:40 a.m. to send a message to your mom to eat breakfast and call you. [ChatEnded]"
+7e67996a-9c71-4d50-8bac-d577475fa61f,2025-11-24T18:27:02.276393Z,"user: Please create a reminder to check the microwave everyday at 7pm
+assistant: I’ll remind you every day at 7 p.m. to check the microwave. [ChatEnded]"
+f6686843-c879-4fef-879e-999f63d103fc,2025-11-24T18:29:04.177512Z,"user: i have a vist next week for my cat strawberry
+assistant: What day and time next week should I remind you about your visit for Strawberry?
+user: tuesday night for the appointment Wednesday morning 9 am
+assistant: I’ll remind you about the visit for your cat Strawberry next Tuesday night, before your Wednesday 9 a.m. appointment. [ChatEnded]"
+61f84587-29e0-4045-bbdc-0cf81427ecdb,2025-11-24T18:32:24.801131Z,"user: I need a reminder to turn the stove off before I start my errands in the morning
+assistant: I’ll remind you to turn the stove off.  
+
+About when should the reminder go off in the morning—for example, at a specific time like 8:30 a.m., or some minutes before you usually leave for your errands?
+user: when I start my errands in the morning
+assistant: So I set the reminder to go off right when you start your errands.
+
+To make sure it can actually trigger, what clock time should I use—for example, about what time do you usually start your errands in the morning?
+user: i start them at 8 am
+assistant: I’ll remind you to turn the stove off at 8 a.m. [ChatEnded]"
+3255a9f6-af73-410d-b8ab-43ef5b9d43de,2025-11-24T18:41:06.383897Z,"user: I need to set reminders for my mom sarah
+assistant: What would you like the reminders to be about for your mom Sarah?
+user: to eat breakfast I brought her
+assistant: When should I remind your mom Sarah to eat breakfast you brought her?
+user: breakfast time
+assistant: Should the reminder go off at a specific clock time (like 8 a.m.), or just when it’s usually “breakfast time” for her?
+user: breakfast time
+assistant: Is there a usual clock time that “breakfast time” happens for her (for example, around 8 a.m.), or would you like me to set it at 8 a.m. by default?
+user: 8 am
+assistant: I’ll remind your mom Sarah to eat the breakfast you brought her at 8 a.m. [ChatEnded]"
+b2345efe-4fd6-400c-bdb6-5d642a6394f1,2025-11-24T19:17:30.048893Z,"user: remind me to go to the gym in 1 hour
+assistant: I’ll remind you to go to the gym in 1 hour. [ChatEnded]"
+cbbdd04c-3520-4bfb-9f56-27e66f791ecc,2025-11-24T19:30:45.718044Z,"user: remind me to turn the stove off when it is on
+assistant: I can’t set it to “when it is on” directly; that isn’t feasible as a reminder.
+
+Would you like me to:
+- remind you **when the stove turns on**,  
+- **when the stove turns off**, or  
+- at **a specific time each day** (for example, around your usual dinner time)?
+user: when the stove turns on
+assistant: I’ll remind you to turn the stove off when the stove turns on. [ChatEnded]"
+d5755898-714c-4086-9287-e44ed2acd709,2025-11-24T23:45:48.485508Z,"user: I have a vet visit next week for my cat strawberry
+assistant: What day and time would you like me to remind you *before* the vet visit next week?
+user: tuesday night for the appointment wednesday 9 am
+assistant: Your reminder is set for before the appointment, but I need a specific time to make it work.
+
+What time on Tuesday night would you like the reminder?  
+(For example: 7:00 pm, 8:00 pm, or 9:00 pm.)
+user: 10 pm
+assistant: I’ll remind you about the vet visit for your cat Strawberry next Tuesday at 10 pm. [ChatEnded]"
+8fb7e896-5b07-4573-bccc-a140d1c8b50b,2025-11-24T23:48:16.735072Z,"user: im always get distracted after I microwave my food and it gets cold
+assistant: It sounds like you’d like a reminder to eat your food before it gets cold.
+
+What exactly should the reminder say or be about—for example, “remind me to take my food out and eat after the microwave finishes”?
+user: remind me to take my food out of the microwave finishes
+assistant: I’ll remind you to take your food out of the microwave.
+
+When should the reminder happen—right when the microwave finishes, or a little bit before/after?
+user: right after
+assistant: I’ll remind you to take your food out of the microwave right after the microwave finishes. [ChatEnded]"
+46b17265-1467-46af-90c5-9ea7a847e1d1,2025-11-24T23:50:29.890031Z,"user: remind me to wash my hands when I get home from work
+assistant: I can’t set it for “when I get home from work” as-is.
+
+Would you like this reminder:
+- when you arrive home,
+- when the front door opens,  
+or  
+- at a specific time like 6:00 p.m. on weekdays?
+user: when I arrive home
+assistant: I’ll remind you to wash your hands when you arrive home. [ChatEnded]"
+7893fd6c-cfb6-4773-bf20-d6ceffc5d04f,2025-11-25T03:01:00.340290Z,"user: I need a reminder to take my supplements after i eat dinner but before bedtime... everyday
+assistant: I’ll remind you every day to take your supplements after dinner but before bedtime, between 8:00 p.m. and 10:30 p.m. [ChatEnded]"
+ed17c006-aeb5-44ec-8ca2-c0c5f142a34e,2025-11-25T03:04:00.352861Z,"user: I need a reminder to take my supplements after i eat dinner but before bedtime... everyday
+assistant: I’ll remind you every day to take your supplements after dinner but before bedtime. [ChatEnded]"
+8a619160-c5a1-4d54-ae18-6d4d08e9aad1,2025-11-25T03:31:50.284249Z,"user: i need you to create a reminder to help me remember to eat dinner
+assistant: I can remind you to eat dinner.  
+
+When would you like this reminder? (For example, a specific time like 6:30 p.m., or a general time like “in the evening.”)
+user: 9:25 pm
+assistant: I’ll remind you to eat dinner at 9:25 p.m. [ChatEnded]"
+f564eacf-d2ed-4579-90dc-afa347e84e35,2025-11-25T03:45:41.924433Z,"user: Generate for me a reminder so that when I place food in my microwave it reminds me when it is done
+assistant: I can remind you when your microwaved food is done.  
+
+When should the reminder go off: as soon as the microwave finishes, or a certain time before/after that?
+user: as soon as it finishes
+assistant: I’ll remind you when your microwaved food is done, as soon as the microwave finishes. [ChatEnded]"
+9b6032bc-9393-48d8-9e70-98b3e270c767,2025-11-25T03:50:20.222465Z,"user: hello
+assistant: Hello! What would you like me to remind you about?
+user: to eat breakfast
+assistant: Okay, I’ll remind you to eat breakfast.  
+
+When would you like the reminder? For example, a specific time like “8 a.m.” or a time of day like “in the morning.”
+user: today
+assistant: I need a more specific time than “today.”
+
+What time today should I remind you to eat breakfast?
+user: 8 am today
+assistant: I’ll remind you to eat breakfast today at 8:00 a.m. [ChatEnded]"
+88d11cc9-cd47-487d-a1b1-47fdd16559c8,2025-11-25T03:51:40.906237Z,"user: once
+assistant: What would you like to be reminded about once?
+user: take my supplements
+assistant: When should I remind you to take your supplements?
+user: tomorrow
+assistant: I’ll remind you to take your supplements tomorrow. [ChatEnded]"
+3f63898d-fd43-46f5-8c14-24d487d1ec7e,2025-11-25T04:42:51.639162Z,"user: hello
+assistant: Hello! What would you like me to remind you about?
+user: hello
+assistant: Hello! What would you like me to be remind you about?
+user: to put my stove off
+assistant: Got it—I’ll remind you to turn your stove off.
+
+When should I remind you? For example, after a certain time, before bedtime, or at a specific clock time?
+user: when it is on
+assistant: Right now I can’t set a reminder for “when it is on” — I need a specific time or period.
+
+When would you like the reminder, for example:
+- every day at a certain time (e.g., 9 p.m.), or  
+- after a certain amount of time the stove has been on (e.g., 30 minutes after you start cooking)?  
+
+Please tell me which you prefer and the time.
+user: at 9 pm
+assistant: I’ll remind you to put your stove off at 9 p.m. [ChatEnded]"
+7607faa8-5eec-481b-a91b-73804b6b50f7,2025-11-25T06:14:29.362947Z,"user: remind me to start doing my laundry after lunch
+assistant: I’ll remind you to start doing your laundry at 1:15 p.m., after lunch. [ChatEnded]"

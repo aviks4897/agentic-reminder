@@ -398,6 +398,7 @@ class ChatAssistant:
                             else wrapper.context.model_dump()
                         )
                         generated_code = await CodeGeneration.generate_code(state_dict)
+                        
                         print("\n[CODEGEN] Generated reminder function:\n")
                         print(generated_code)
                     except Exception as e:
